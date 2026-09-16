@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package schemaregistry;
+
+// Спецификация сервиса схем, который необходимо разработать (см. README)
+service SchemaRegistry {
+  rpc RegisterSchema(RegisterSchemaRequest) returns (RegisterSchemaResponse);
+  rpc CheckCompatibility(CheckCompatibilityRequest) returns (CheckCompatibilityResponse);
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+  rpc GetLatestVersion(GetLatestVersionRequest) returns (GetLatestVersionResponse);
+}
+
+//
+// Описание Thrift-схемы
+//
+
+// Тип поля Thrift-сущности
+enum FieldType {
+  FIELD_TYPE_UNSPECIFIED = 0; // Не указан (запрещён)
+  FIELD_TYPE_I32 = 1; // 32-битное целое
+  FIELD_TYPE_I64 = 2; // 64-битное целое
+  FIELD_TYPE_STRING = 3; // Строка
+  FIELD_TYPE_BOOL = 4; // Булиан
+  FIELD_TYPE_DOUBLE = 5; // С плавающей точкой
+}
+
+// Поле Thrift-сущности
+message Field {
+  int32 id = 1; // идентификатор
+  string name = 2; // символьное имя
+  FieldType type = 3; // тип
+  bool required = 4; // флажок required/optional
+}
+
+// Thrift-сущность
+message Struct {
+  string name = 1; // символьное имя
+  repeated Field fields = 2; // поля сущности
+}
+
+// Thrift-схема
+message Schema {
+  repeated Struct structs = 1; // сущности схемы
+}
+
+//
+// Запросы/Ответы от сервера
+//
+
+// Код ошибки совместимости (см. README)
+enum CompatibilityIssueType {
+  ADDED_REQUIRED_FIELD = 0;
+  REMOVED_REQUIRED_FIELD = 1;
+  FIELD_TYPE_CHANGED = 2;
+  OPTIONAL_TO_REQUIRED = 3;
+  FIELD_ID_CHANGED = 4;
+  DUPLICATE_FIELD_ID = 5;
+  DUPLICATE_FIELD_NAME = 6;
+  DUPLICATE_STRUCT_NAME	= 7;
+}
+
+// Проблема совместимости
+message CompatibilityIssue {
+  CompatibilityIssueType code = 1; // код нарушения совместимости
+  string message = 2; // человекочитаемое описание
+  string struct_name = 3; // имя структуры, в которой произошло нарушение
+  int32 field_id = 4; // id поля, если применимо
+}
+
+// Запрос на регистрацию Thrift-схемы для сервиса
+message RegisterSchemaRequest {
+  string service_name = 1; // ключ сервиса (ключ схемы)
+  Schema schema = 2; // схема
+}
+
+// Ответ на регистрацию Thrift-схемы для сервиса
+message RegisterSchemaResponse {
+  bool accepted = 1; // принято ли обновление схемы
+  int32 version = 2; // присвоенная версия (текущий, если не принята; новый, если принята)
+  repeated CompatibilityIssue issues = 3; // список проблем совместимости (пустой при успехе)
+}
+
+// Запрос на проверку совместимости новой схемы со старой
+message CheckCompatibilityRequest {
+  string service_name = 1; // ключ сервиса (ключ схемы)
+  int32 base_version = 2; // номер версии, с которой произвести сравнение
+  Schema candidate_schema = 3; // новая схема, которую надо проверить на совместимость с base_version
+}
+
+// Ответ на проверку совместимости новой схемы со старой
+message CheckCompatibilityResponse {
+  bool compatible = 1; // все ли окей по совместимости
+  repeated CompatibilityIssue issues = 2; // список проблем совместимости
+}
+
+// Запрос на получение схемы по версии
+message GetSchemaRequest {
+  string service_name = 1; // ключ сервиса (ключ схемы)
+  int32 version = 2; // номер версии схемы
+}
+
+// Ответ на получение схемы по версии
+message GetSchemaResponse {
+  int32 version = 1; // номер версии схемы
+  Schema schema = 2; // схема
+}
+
+// Запрос на получение номера последней версии схемы
+message GetLatestVersionRequest {
+  string service_name = 1; // ключ сервиса (ключ схемы)
+}
+
+// Ответ на получение номера последний версии схемы
+message GetLatestVersionResponse {
+  int32 version = 1; // номер последней версии схемы
+}

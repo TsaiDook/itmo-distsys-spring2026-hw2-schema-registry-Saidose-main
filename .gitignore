@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+.venv311/
+src/schema_registry_pb2.py
+src/schema_registry_pb2_grpc.py
+src/server_solution.py
